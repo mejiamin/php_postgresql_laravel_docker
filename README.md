@@ -229,7 +229,7 @@ echo gettype($num);     // integer
 
 ## Практическое задание
 
-Создай файл `lesson1.php` и реализуй калькулятор корзины интернет-магазина.
+Реализуй калькулятор корзины интернет-магазина.
 
 **Что нужно сделать:**
 
@@ -247,3 +247,48 @@ echo gettype($num);     // integer
 ```
 
 **Подсказка:** функция `number_format($number, 2)` форматирует число с двумя знаками после запятой. Только чистый PHP — никаких библиотек.
+
+---
+
+## Решение практического задания
+
+```php
+<?php
+
+// 1. Объявление переменных
+$productName = "Ноутбук";
+$price = 75000.00;
+$quantity = 2;
+$discountPercent = 10.0;
+$discountApplied = true;
+
+// 2. Расчеты (обязательно ДО форматирования!)
+$totalWithoutDiscount = $price * $quantity;
+
+// Учитываем флаг $discountApplied: если true — считаем скидку, иначе скидка 0
+$discountAmount = $discountApplied ? ($totalWithoutDiscount * ($discountPercent / 100)) : 0.0;
+
+$totalWithDiscount = $totalWithoutDiscount - $discountAmount;
+
+// 3. Форматирование чисел
+$formattedPrice = number_format($price, 2, '.', '');
+$formattedTotalWithoutDiscount = number_format($totalWithoutDiscount, 2, '.', '');
+$formattedDiscountAmount = number_format($discountAmount, 2, '.', '');
+$formattedTotalWithDiscount = number_format($totalWithDiscount, 2, '.', '');
+$formattedDiscountPercent = number_format($discountPercent, 0);
+
+// 4. Формирование текста чека через Heredoc (без кавычек и точек конкатенации)
+$checks = <<<EOT
+=== Чек ===
+Товар: {$productName}
+Цена: {$formattedPrice} руб.
+Количество: {$quantity} шт.
+Итого без скидки: {$formattedTotalWithoutDiscount} руб.
+Скидка ({$formattedDiscountPercent}%): {$formattedDiscountAmount} руб.
+Итого со скидкой: {$formattedTotalWithDiscount} руб.
+===========
+EOT;
+
+// 5. Вывод
+echo $checks;
+```
