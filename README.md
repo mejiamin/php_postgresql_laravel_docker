@@ -4,9 +4,9 @@
 
 **Этап 1 - 4 урока: PHP**
 
-1. **👉  Переменные и типы данных**
+1. Переменные и типы данных
 2. Управление потоком и функции
-3. ООП в PHP
+3. **👉 ООП в PHP**
 4. Файлы и обработка ошибок
 
 **Этап 2 - 3 урока: SQL & PostgreSQL**
@@ -32,221 +32,224 @@
 
 ---
 
-## Урок 1 — Переменные и типы данных в PHP
+## Урок 3 — ООП в PHP
 
-### Подготовка
+ООП — это способ организовать код вокруг объектов, которые сочетают данные и поведение. Вместо отдельных функций и массивов ты создаёшь классы, которые описывают сущности предметной области.
 
-Нужен PHP 8.1 или выше. Проверь:
+### 1. Класс и объект
 
-```bash
-php --version
-# PHP 8.2.x ...
+Класс — это шаблон. Объект — экземпляр этого шаблона:
+
+```php
+<?php
+
+class Product {
+  // Свойства — данные объекта
+  public string $name;
+  public float $price;
+
+  // Конструктор — вызывается при создании объекта
+  public function __construct(string $name, float $price) {
+    $this->name  = $name;
+    $this->price = $price;
+  }
+
+  // Метод — поведение объекта
+  public function getFormattedPrice(): string {
+    return number_format($this->price, 2, '.', '') . " руб.";
+  }
+}
+
+$laptop = new Product("Ноутбук", 75000.0);
+echo $laptop->name;                  // Ноутбук
+echo $laptop->getFormattedPrice();   // 75000.00 руб.
 ```
 
-Если не установлен — на macOS: `brew install php`, на Ubuntu: `sudo apt install php8.2`. Запускать скрипты будем через терминал: `php lesson1.php`. К Docker вернёмся на этапе 4 — там это сделаем правильно.
+`$this` внутри класса — это ссылка на текущий объект.
 
 ---
 
-### 1. Теги и базовый вывод
+### 2. Модификаторы доступа
 
-Каждый PHP-файл начинается с `<?php`. Закрывающий тег `?>` в конце чистого PHP-файла не нужен — это соглашение, которое предотвращает случайные пробелы в HTTP-ответах.
-
-```php
-<?php
-
-echo "Hello, World!\n";   // выводит строку
-print "Ещё вариант\n";    // то же самое, но возвращает 1
-```
-
----
-
-### 2. Переменные
-
-В PHP переменные начинаются с `$`. Тип переменной определяется автоматически при присваивании — это называется динамической типизацией.
+`public` — доступно везде. `private` — только внутри класса. `protected` — внутри класса и его наследников. Правило хорошего тона: свойства делай `private`, доступ давай через методы:
 
 ```php
 <?php
 
-$name       = "Иван";       // string
-$age        = 25;           // int
-$salary     = 75000.50;     // float
-$isEmployed = true;         // bool
-$nothing    = null;         // null
+class Product {
+  private string $name;
+  private float  $price;
+  private float  $discount; // в процентах
 
-echo $name;   // Иван
-echo "\n";
-echo $age;    // 25
-```
+  public function __construct(
+    string $name, 
+    float $price, 
+    float $discount = 0.0,
+  ) {
+    $this->name     = $name;
+    $this->price    = $price;
+    $this->discount = $discount;
+  }
 
-Переменные регистрозависимы: `$Name` и `$name` — это разные переменные. Имя может содержать буквы, цифры и `_`, но не может начинаться с цифры.
+  // Геттеры — контролируемый доступ к данным
+  public function getName(): string  { return $this->name; }
+  public function getPrice(): float  { return $this->price; }
 
----
+  // Бизнес-логика внутри класса
+  public function getTotal(): float {
+    return $this->price * (1 - $this->discount / 100);
+  }
 
-### 3. Типы данных
+  public function hasDiscount(): bool {
+    return $this->discount > 0.0;
+  }
 
-PHP поддерживает 8 основных типов. Тебе сейчас важны первые шесть:
+  public function getDiscountPercent(): float {
+    return $this->discount;
+  }
+}
 
-| Тип | Примеры | Когда использовать |
-|---|---|---|
-| `int` | `42`, `-7`, `0` | целые числа |
-| `float` | `3.14`, `-0.5` | числа с дробной частью |
-| `string` | `"привет"`, `'world'` | текст |
-| `bool` | `true`, `false` | логические значения |
-| `null` | `null` | отсутствие значения |
-| `array` | `[1, "два", 3.0]` | коллекции |
+$mouse = new Product("Мышь", 2500.0);
+$laptop = new Product("Ноутбук", 75000.0, 10.0);
 
----
-
-### 4. Диагностика: var_dump и print_r
-
-`var_dump` — твой главный инструмент отладки. Показывает тип и значение:
-
-```php
-<?php
-
-$x = 42;
-$y = 3.14;
-$s = "hello";
-$b = true;
-$n = null;
-
-var_dump($x);  // int(42)
-var_dump($y);  // float(3.14)
-var_dump($s);  // string(5) "hello"
-var_dump($b);  // bool(true)
-var_dump($n);  // NULL
-```
-
-`print_r` удобнее для массивов — выводит структуру в читаемом виде:
-
-```php
-<?php
-
-$arr = [1, "два", 3.0, true];
-print_r($arr);
-/*
-Array
-(
-    [0] => 1
-    [1] => два
-    [2] => 3
-    [3] => 1
-)
-*/
-```
-
-`gettype()` вернёт имя типа строкой, если нужно проверить программно: `echo gettype(42);` выведет `integer`.
-
----
-
-### 5. Строки
-
-Одинарные кавычки — строка выводится дословно, без подстановки переменных. Двойные кавычки — переменные внутри раскрываются. Heredoc (`<<<EOT`) удобен для многострочных шаблонов и тоже поддерживает интерполяцию.
-
-```php
-<?php
-
-$name = "Мария";
-$age  = 30;
-
-echo 'Привет, $name';              // Привет, $name  (буквально)
-echo "Привет, $name! Тебе $age лет.\n"; // Привет, Мария! Тебе 30 лет.
-
-$text = <<<EOT
-Имя: $name
-Возраст: $age
-EOT;
-echo $text;
-```
-
-Конкатенация — через оператор `.`. Присваивание с конкатенацией — `.=`:
-
-```php
-<?php
-
-$first = "Иван";
-$last  = "Петров";
-$full  = $first . " " . $last;  // "Иван Петров"
-
-$greeting  = "Привет";
-$greeting .= ", мир!";          // "Привет, мир!"
+echo $laptop->getTotal();    // 67500
+echo $laptop->hasDiscount(); // 1 (true)
 ```
 
 ---
 
-### 6. Арифметические операторы
+### 3. Магический метод __toString
+
+Позволяет использовать объект как строку — в `echo` и конкатенации:
 
 ```php
 <?php
 
-$a = 10;
-$b = 3;
+class Product {
+  // ... (свойства и конструктор как выше)
 
-echo $a + $b;   // 13
-echo $a - $b;   // 7
-echo $a * $b;   // 30
-echo $a / $b;   // 3.3333...
-echo $a % $b;   // 1  — остаток от деления
-echo $a ** $b;  // 1000 — возведение в степень
+  public function __toString(): string {
+    $total = number_format($this->getTotal(), 2, '.', '');
+    $info  = $this->hasDiscount()
+      ? " (скидка {$this->discount}%)"
+      : "";
+    return "{$this->name}: {$total} руб.{$info}";
+  }
+}
 
-// Сокращённые формы
-$x = 5;
-$x += 3;   // $x = 8
-$x -= 2;   // $x = 6
-$x *= 4;   // $x = 24
-$x /= 6;   // $x = 4
-$x++;      // $x = 5 (инкремент)
-$x--;      // $x = 4 (декремент)
+$laptop = new Product("Ноутбук", 75000.0, 10.0);
+echo $laptop; // Ноутбук: 67500.00 руб. (скидка 10%)
 ```
 
 ---
 
-### 7. Приведение типов
+### 4. Наследование
 
-PHP умеет автоматически конвертировать типы, но иногда нужно делать это явно:
+Дочерний класс получает все свойства и методы родителя и может расширять или переопределять их:
 
 ```php
 <?php
 
-$strNum = "42abc";
-$num    = (int) $strNum;   // 42 — PHP берёт цифры с начала строки
-var_dump($num);             // int(42)
+class Product {
+  public function __construct(
+    protected string $name,
+    protected float  $price
+  ) {}
 
-$price = 9.99;
-$units = (int) $price;     // 9 — дробная часть отбрасывается (не округляется!)
-var_dump($units);           // int(9)
+  public function getTotal(): float {
+    return $this->price;
+  }
 
-$zero   = 0;
-$asBool = (bool) $zero;    // false — 0, "", "0", [], null → false
-var_dump($asBool);          // bool(false)
+  public function getName(): string { return $this->name; }
+}
 
-// Проверить тип
-echo gettype($strNum);  // string
-echo gettype($num);     // integer
+// Promoted properties в конструкторе (PHP 8) — сокращение выше
+// protected string $name автоматически создаёт свойство и присваивает его
+
+class DiscountedProduct extends Product {
+  public function __construct(
+    string $name,
+    float  $price,
+    private float $discount // добавляем новое свойство
+  ) {
+    parent::__construct($name, $price); // вызов конструктора родителя
+  }
+
+  // Переопределяем метод родителя
+  public function getTotal(): float {
+    return $this->price * (1 - $this->discount / 100);
+  }
+
+  public function getDiscount(): float { return $this->discount; }
+}
+
+$regular    = new Product("Мышь", 2500.0);
+$discounted = new DiscountedProduct("Ноутбук", 75000.0, 10.0);
+
+echo $regular->getTotal();    // 2500
+echo $discounted->getTotal(); // 67500
+```
+
+---
+
+### 5. Интерфейс
+
+Интерфейс — это контракт: класс, реализующий интерфейс, обязан иметь все указанные методы. Это основа полиморфизма:
+
+```php
+<?php
+
+interface Printable {
+  public function toReceiptLine(): string;
+}
+
+class Product implements Printable {
+  public function __construct(
+    private string $name,
+    private float  $price,
+    private float  $discount = 0.0
+  ) {}
+
+  public function getTotal(): float {
+    return $this->price * (1 - $this->discount / 100);
+  }
+
+  public function toReceiptLine(): string {
+    $total = number_format($this->getTotal(), 2, '.', '');
+    $info  = $this->discount > 0 ? " (скидка {$this->discount}%)" : "";
+    return str_pad($this->name, 15) . "— {$total} руб.{$info}";
+  }
+}
 ```
 
 ---
 
 ## Практическое задание
 
-Реализуй калькулятор корзины интернет-магазина.
+Создай файл `lesson3.php`. Реализуй три класса.
 
-**Что нужно сделать:**
+**`Product`** — свойства `name`, `price`, `discount` (все `private`). Конструктор с тремя параметрами, `discount = 0.0` по умолчанию. Методы: `getName()`, `getTotal(): float` (цена со скидкой), `toReceiptLine(): string` (одна строка для чека).
 
-Объяви переменные: название товара (string), цену за единицу (float), количество (int), процент скидки (float), признак что скидка применена (bool). Посчитай итоговую сумму без скидки, размер скидки в рублях и итоговую сумму со скидкой. Выведи чек в таком виде:
+**`Cart`** — хранит массив объектов `Product` в приватном свойстве `$items = []`. Методы: `addProduct(Product $product): void`, `getGrandTotal(): float` (сумма всех `getTotal()`), `printReceipt(): void` (выводит полный чек).
+
+**`DiscountedCart`** — наследует `Cart`. Принимает в конструктор дополнительный `float $extraDiscount` — скидка на всю корзину целиком. Переопределяет `getGrandTotal()`: применяет `$extraDiscount` поверх суммы родителя. Переопределяет `printReceipt()`: добавляет строку с общей скидкой на корзину.
+
+Ожидаемый вывод:
 
 ```
-=== Чек ===
-Товар: Ноутбук
-Цена: 75000.00 руб.
-Количество: 2 шт.
-Итого без скидки: 150000.00 руб.
-Скидка (10%): 15000.00 руб.
-Итого со скидкой: 135000.00 руб.
-===========
-```
+=== Обычная корзина ===
+Ноутбук         — 67500.00 руб. (скидка 10%)
+Мышь            — 2500.00 руб.
+Клавиатура      — 10500.00 руб. (скидка 5%)
+Итого: 80500.00 руб.
 
-**Подсказка:** функция `number_format($number, 2)` форматирует число с двумя знаками после запятой. Только чистый PHP — никаких библиотек.
+=== VIP корзина (доп. скидка 5%) ===
+Ноутбук         — 67500.00 руб. (скидка 10%)
+Мышь            — 2500.00 руб.
+Итого без доп. скидки: 70000.00 руб.
+Доп. скидка (5%): 3500.00 руб.
+Итого: 66500.00 руб.
+```
 
 ---
 
@@ -255,40 +258,122 @@ echo gettype($num);     // integer
 ```php
 <?php
 
-// 1. Объявление переменных
-$productName = "Ноутбук";
-$price = 75000.00;
-$quantity = 2;
-$discountPercent = 10.0;
-$discountApplied = true;
+class Product
+{
+  // Constructor promotion (PHP 8) — свойства объявляются прямо в конструкторе
+  public function __construct(
+    private string $name,
+    private float  $price,
+    private float  $discount = 0.0
+  ) {}
 
-// 2. Расчеты (обязательно ДО форматирования!)
-$totalWithoutDiscount = $price * $quantity;
+  public function getName(): string
+  {
+    return $this->name;
+  }
 
-// Учитываем флаг $discountApplied: если true — считаем скидку, иначе скидка 0
-$discountAmount = $discountApplied ? ($totalWithoutDiscount * ($discountPercent / 100)) : 0.0;
+  public function getTotal(): float
+  {
+    return $this->price * (1 - $this->discount / 100);
+  }
 
-$totalWithDiscount = $totalWithoutDiscount - $discountAmount;
+  public function toReceiptLine(): string
+  {
+    $total        = number_format($this->getTotal(), 2, '.', '');
+    $discountInfo = $this->discount > 0
+      ? " (скидка {$this->discount}%)"
+      : "";
 
-// 3. Форматирование чисел
-$formattedPrice = number_format($price, 2, '.', '');
-$formattedTotalWithoutDiscount = number_format($totalWithoutDiscount, 2, '.', '');
-$formattedDiscountAmount = number_format($discountAmount, 2, '.', '');
-$formattedTotalWithDiscount = number_format($totalWithDiscount, 2, '.', '');
-$formattedDiscountPercent = number_format($discountPercent, 0);
+    return str_pad($this->name, 15) . "— {$total} руб.{$discountInfo}";
+  }
+}
 
-// 4. Формирование текста чека через Heredoc (без кавычек и точек конкатенации)
-$checks = <<<EOT
-=== Чек ===
-Товар: {$productName}
-Цена: {$formattedPrice} руб.
-Количество: {$quantity} шт.
-Итого без скидки: {$formattedTotalWithoutDiscount} руб.
-Скидка ({$formattedDiscountPercent}%): {$formattedDiscountAmount} руб.
-Итого со скидкой: {$formattedTotalWithDiscount} руб.
-===========
-EOT;
+class Cart
+{
+  // protected — чтобы DiscountedCart мог обратиться к items
+  // private здесь не подойдёт: дочерний класс его не увидит
+  protected array $items = [];
 
-// 5. Вывод
-echo $checks;
+  public function addProduct(Product $product): void
+  {
+    $this->items[] = $product;
+  }
+
+  public function getGrandTotal(): float
+  {
+    $total = 0.0;
+    foreach ($this->items as $item) {
+      $total += $item->getTotal();
+    }
+    return $total;
+  }
+
+  // protected — общий вспомогательный метод для дочерних классов
+  // Это паттерн "Template Method": родитель предоставляет строительный блок
+  protected function printItems(): void
+  {
+    foreach ($this->items as $item) {
+      echo $item->toReceiptLine() . PHP_EOL;
+    }
+  }
+
+  public function printReceipt(): void
+  {
+    echo "=== Обычная корзина ===" . PHP_EOL;
+    $this->printItems();
+    echo "Итого: " . number_format($this->getGrandTotal(), 2, '.', '')
+      . " руб." . PHP_EOL;
+  }
+}
+
+class DiscountedCart extends Cart
+{
+  public function __construct(private float $extraDiscount) {}
+
+  public function getGrandTotal(): float
+  {
+    // parent:: — вызов метода родительского класса
+    // Берём сумму до доп. скидки и применяем свою
+    return parent::getGrandTotal() * (1 - $this->extraDiscount / 100);
+  }
+
+  public function printReceipt(): void
+  {
+    $subtotal       = parent::getGrandTotal();  // сумма БЕЗ доп. скидки
+    $discountAmount = $subtotal * ($this->extraDiscount / 100);
+    $grandTotal     = $this->getGrandTotal();   // сумма СО скидкой
+
+    echo "=== VIP корзина (доп. скидка {$this->extraDiscount}%) ===" . PHP_EOL;
+    $this->printItems();  // унаследованный метод Cart
+    echo "Итого без доп. скидки: "
+      . number_format($subtotal, 2, '.', '') . " руб." . PHP_EOL;
+    echo "Доп. скидка ({$this->extraDiscount}%): "
+      . number_format($discountAmount, 2, '.', '') . " руб." . PHP_EOL;
+    echo "Итого: "                                
+      . number_format($grandTotal, 2, '.', '')      . " руб." . PHP_EOL;
+  }
+}
+
+// --- Использование ---
+
+$cart = new Cart();
+$cart->addProduct(new Product("Ноутбук",    75000.00, 10.0));
+$cart->addProduct(new Product("Мышь",        2500.00));
+$cart->addProduct(new Product("Клавиатура", 11052.63,  5.0));
+$cart->printReceipt();
+
+echo PHP_EOL;
+
+$vipCart = new DiscountedCart(5.0);
+$vipCart->addProduct(new Product("Ноутбук", 75000.00, 10.0));
+$vipCart->addProduct(new Product("Мышь",     2500.00));
+$vipCart->printReceipt();
 ```
+
+**Три ключевые вещи, которые стоит понять прежде чем копировать:**
+
+`protected` на `$items` — это намеренное решение. Если оставить `private`, `DiscountedCart` не увидит массив товаров и `printItems()` сломается. `protected` открывает доступ только для наследников, не для всего остального кода.
+
+`parent::getGrandTotal()` в двух местах `DiscountedCart` — это не баг, это осознанно. Для `$subtotal` нужна сумма без доп. скидки (т.е. результат родительского метода), для `$grandTotal` — уже с ней. Если вызвать `$this->getGrandTotal()` оба раза, скидка применится дважды.
+
+Constructor promotion — это синтаксический сахар PHP 8. `private float $extraDiscount` в конструкторе одновременно объявляет свойство, задаёт его тип и присваивает значение. Старый способ — три отдельных строки.
