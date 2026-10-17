@@ -5,8 +5,8 @@
 **Этап 1 - 4 урока: PHP**
 
 1. Переменные и типы данных
-2. **👉 Управление потоком и функции**
-3. ООП в PHP
+2. Управление потоком и функции
+3. **👉 ООП в PHP**
 4. Файлы и обработка ошибок
 
 **Этап 2 - 3 урока: SQL & PostgreSQL**
@@ -32,190 +32,223 @@
 
 ---
 
-## Урок 2 — Управление потоком и функции
+## Урок 3 — ООП в PHP
 
-### 1. Условные операторы
+ООП — это способ организовать код вокруг объектов, которые сочетают данные и поведение. Вместо отдельных функций и массивов ты создаёшь классы, которые описывают сущности предметной области.
 
-`if / elseif / else` — основа ветвления:
+### 1. Класс и объект
+
+Класс — это шаблон. Объект — экземпляр этого шаблона:
 
 ```php
 <?php
 
-$age = 20;
+class Product {
+  // Свойства — данные объекта
+  public string $name;
+  public float $price;
 
-if ($age < 18) {
-    echo "Несовершеннолетний\n";
-} elseif ($age < 65) {
-    echo "Взрослый\n";
-} else {
-    echo "Пенсионер\n";
+  // Конструктор — вызывается при создании объекта
+  public function __construct(string $name, float $price) {
+    $this->name  = $name;
+    $this->price = $price;
+  }
+
+  // Метод — поведение объекта
+  public function getFormattedPrice(): string {
+    return number_format($this->price, 2, '.', '') . " руб.";
+  }
 }
+
+$laptop = new Product("Ноутбук", 75000.0);
+echo $laptop->name;                  // Ноутбук
+echo $laptop->getFormattedPrice();   // 75000.00 руб.
 ```
 
-`match` — это PHP 8+, строгое сравнение (без приведения типов), возвращает значение. Лаконичнее `switch` и безопаснее:
+`$this` внутри класса — это ссылка на текущий объект.
+
+---
+
+### 2. Модификаторы доступа
+
+`public` — доступно везде. `private` — только внутри класса. `protected` — внутри класса и его наследников. Правило хорошего тона: свойства делай `private`, доступ давай через методы:
 
 ```php
 <?php
 
-$status = "active";
+class Product {
+  private string $name;
+  private float  $price;
+  private float  $discount; // в процентах
 
-$label = match($status) {
-    "active"  => "Активен",
-    "banned"  => "Заблокирован",
-    "pending" => "На проверке",
-    default   => "Неизвестно",
-};
+  public function __construct(
+    string $name, 
+    float $price, 
+    float $discount = 0.0,
+  ) {
+    $this->name     = $name;
+    $this->price    = $price;
+    $this->discount = $discount;
+  }
 
-echo $label; // Активен
-```
+  // Геттеры — контролируемый доступ к данным
+  public function getName(): string  { return $this->name; }
+  public function getPrice(): float  { return $this->price; }
 
-`switch` — старый вариант, использует нестрогое сравнение (`==`). Часто `match` предпочтительнее, но `switch` встретишь в чужом коде:
+  // Бизнес-логика внутри класса
+  public function getTotal(): float {
+    return $this->price * (1 - $this->discount / 100);
+  }
 
-```php
-<?php
+  public function hasDiscount(): bool {
+    return $this->discount > 0.0;
+  }
 
-$day = 3;
-
-switch ($day) {
-    case 1:
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-        echo "Будний день\n";
-        break;
-    case 6:
-    case 7:
-        echo "Выходной\n";
-        break;
-    default:
-        echo "Неверный день\n";
+  public function getDiscountPercent(): float {
+    return $this->discount;
+  }
 }
+
+$mouse = new Product("Мышь", 2500.0);
+$laptop = new Product("Ноутбук", 75000.0, 10.0);
+
+echo $laptop->getTotal();    // 67500
+echo $laptop->hasDiscount(); // 1 (true)
 ```
 
 ---
 
-### 2. Циклы
+### 3. Магический метод __toString
 
-`for` — когда известно количество итераций:
-
-```php
-<?php
-
-for ($i = 1; $i <= 5; $i++) {
-    echo "Итерация $i\n";
-}
-```
-
-`while` — пока условие истинно:
+Позволяет использовать объект как строку — в `echo` и конкатенации:
 
 ```php
 <?php
 
-$n = 1;
-while ($n <= 100) {
-    $n *= 2;
-}
-echo $n; // 128 — первая степень двойки, превышающая 100
-```
+class Product {
+  // ... (свойства и конструктор как выше)
 
-`foreach` — для перебора массивов, используется чаще всего:
-
-```php
-<?php
-
-$fruits = ["яблоко", "банан", "вишня"];
-
-foreach ($fruits as $fruit) {
-    echo $fruit . "\n";
+  public function __toString(): string {
+    $total = number_format($this->getTotal(), 2, '.', '');
+    $info  = $this->hasDiscount()
+      ? " (скидка {$this->discount}%)"
+      : "";
+    return "{$this->name}: {$total} руб.{$info}";
+  }
 }
 
-// Ассоциативный массив — ключ => значение
-$prices = ["яблоко" => 50, "банан" => 30, "вишня" => 120];
-
-foreach ($prices as $name => $price) {
-    echo "$name: $price руб.\n";
-}
+$laptop = new Product("Ноутбук", 75000.0, 10.0);
+echo $laptop; // Ноутбук: 67500.00 руб. (скидка 10%)
 ```
 
 ---
 
-### 3. Функции
+### 4. Наследование
 
-Объявление и вызов:
+Дочерний класс получает все свойства и методы родителя и может расширять или переопределять их:
 
 ```php
 <?php
 
-function greet(string $name): string {
-    return "Привет, $name!";
+class Product {
+  public function __construct(
+    protected string $name,
+    protected float  $price
+  ) {}
+
+  public function getTotal(): float {
+    return $this->price;
+  }
+
+  public function getName(): string { return $this->name; }
 }
 
-echo greet("Анна"); // Привет, Анна!
+// Promoted properties в конструкторе (PHP 8) — сокращение выше
+// protected string $name автоматически создаёт свойство и присваивает его
+
+class DiscountedProduct extends Product {
+  public function __construct(
+    string $name,
+    float  $price,
+    private float $discount // добавляем новое свойство
+  ) {
+    parent::__construct($name, $price); // вызов конструктора родителя
+  }
+
+  // Переопределяем метод родителя
+  public function getTotal(): float {
+    return $this->price * (1 - $this->discount / 100);
+  }
+
+  public function getDiscount(): float { return $this->discount; }
+}
+
+$regular    = new Product("Мышь", 2500.0);
+$discounted = new DiscountedProduct("Ноутбук", 75000.0, 10.0);
+
+echo $regular->getTotal();    // 2500
+echo $discounted->getTotal(); // 67500
 ```
 
-Параметры по умолчанию — указываются в конце сигнатуры:
+---
+
+### 5. Интерфейс
+
+Интерфейс — это контракт: класс, реализующий интерфейс, обязан иметь все указанные методы. Это основа полиморфизма:
 
 ```php
 <?php
 
-function calcDiscount(float $price, float $percent = 10.0): float {
-    return $price * ($percent / 100);
+interface Printable {
+  public function toReceiptLine(): string;
 }
 
-echo calcDiscount(5000);       // 500   — использует 10% по умолчанию
-echo calcDiscount(5000, 15.0); // 750   — передаём явно
-```
+class Product implements Printable {
+  public function __construct(
+    private string $name,
+    private float  $price,
+    private float  $discount = 0.0
+  ) {}
 
-Тайп-хинты (PHP 7+) — объявляй типы параметров и возвращаемого значения. Это делает код самодокументируемым и ловит ошибки раньше:
+  public function getTotal(): float {
+    return $this->price * (1 - $this->discount / 100);
+  }
 
-```php
-<?php
-
-function formatMoney(float $amount, string $currency = "руб."): string {
-    return number_format($amount, 2, '.', '') . " " . $currency;
+  public function toReceiptLine(): string {
+    $total = number_format($this->getTotal(), 2, '.', '');
+    $info  = $this->discount > 0 ? " (скидка {$this->discount}%)" : "";
+    return str_pad($this->name, 15) . "— {$total} руб.{$info}";
+  }
 }
-
-echo formatMoney(12345.6);        // 12345.60 руб.
-echo formatMoney(99.99, "USD");   // 99.99 USD
-```
-
-Область видимости переменных — внутри функции нет доступа к внешним переменным (в отличие от JS). Нужна переменная снаружи — передай параметром:
-
-```php
-<?php
-
-$tax = 0.2;
-
-function addTax(float $price, float $taxRate): float {
-    return $price * (1 + $taxRate);
-}
-
-echo addTax(1000, $tax); // 1200
 ```
 
 ---
 
 ## Практическое задание
 
-Расширенный чек для нескольких товаров.
+Создай файл `lesson3.php`. Реализуй три класса.
 
-**Что нужно:**
+**`Product`** — свойства `name`, `price`, `discount` (все `private`). Конструктор с тремя параметрами, `discount = 0.0` по умолчанию. Методы: `getName()`, `getTotal(): float` (цена со скидкой), `toReceiptLine(): string` (одна строка для чека).
 
-Напиши функцию `calcTotal(float $price, int $qty, float $discount = 0.0): float`, которая принимает цену, количество и процент скидки, возвращает итоговую сумму. Напиши функцию `formatMoney(float $amount): string`, которая форматирует число в строку `"75000.00 руб."`.
+**`Cart`** — хранит массив объектов `Product` в приватном свойстве `$items = []`. Методы: `addProduct(Product $product): void`, `getGrandTotal(): float` (сумма всех `getTotal()`), `printReceipt(): void` (выводит полный чек).
 
-Создай массив из трёх товаров (каждый товар — ассоциативный массив с ключами `name`, `price`, `qty`, `discount`). С помощью `foreach` пройдись по массиву, посчитай итог для каждого через `calcTotal` и выведи строку чека. В конце выведи общую сумму всех товаров. Используй `match` или `if`, чтобы добавить к итогу пометку: если сумма больше 100 000 — `"(Крупный заказ)"`, иначе — `"(Обычный заказ)"`.
+**`DiscountedCart`** — наследует `Cart`. Принимает в конструктор дополнительный `float $extraDiscount` — скидка на всю корзину целиком. Переопределяет `getGrandTotal()`: применяет `$extraDiscount` поверх суммы родителя. Переопределяет `printReceipt()`: добавляет строку с общей скидкой на корзину.
 
-Ожидаемый вывод (цифры будут твои):
+Ожидаемый вывод:
 
 ```
-=== Чек ===
-Ноутбук       x2  — 135000.00 руб. (скидка 10%)
-Мышь          x1  — 2500.00 руб.
-Клавиатура    x3  — 10500.00 руб. (скидка 5%)
------------
-Итого: 148000.00 руб. (Крупный заказ)
-===========
+=== Обычная корзина ===
+Ноутбук         — 67500.00 руб. (скидка 10%)
+Мышь            — 2500.00 руб.
+Клавиатура      — 10500.00 руб. (скидка 5%)
+Итого: 80500.00 руб.
+
+=== VIP корзина (доп. скидка 5%) ===
+Ноутбук         — 67500.00 руб. (скидка 10%)
+Мышь            — 2500.00 руб.
+Итого без доп. скидки: 70000.00 руб.
+Доп. скидка (5%): 3500.00 руб.
+Итого: 66500.00 руб.
 ```
 
 ---
@@ -225,73 +258,122 @@ echo addTax(1000, $tax); // 1200
 ```php
 <?php
 
-// 1. Функция расчета итоговой суммы одного товара с учетом скидки
-function calcTotal(float $price, int $qty, float $discount = 0.0): float
+class Product
 {
-    $subtotal = $price * $qty;
-    $discountAmount = $subtotal * ($discount / 100);
-    return $subtotal - $discountAmount;
+  // Constructor promotion (PHP 8) — свойства объявляются прямо в конструкторе
+  public function __construct(
+    private string $name,
+    private float  $price,
+    private float  $discount = 0.0
+  ) {}
+
+  public function getName(): string
+  {
+    return $this->name;
+  }
+
+  public function getTotal(): float
+  {
+    return $this->price * (1 - $this->discount / 100);
+  }
+
+  public function toReceiptLine(): string
+  {
+    $total        = number_format($this->getTotal(), 2, '.', '');
+    $discountInfo = $this->discount > 0
+      ? " (скидка {$this->discount}%)"
+      : "";
+
+    return str_pad($this->name, 15) . "— {$total} руб.{$discountInfo}";
+  }
 }
 
-// 2. Функция форматирования денежной суммы
-function formatMoney(float $amount): string
+class Cart
 {
-    return number_format($amount, 2, '.', '') . " руб.";
+  // protected — чтобы DiscountedCart мог обратиться к items
+  // private здесь не подойдёт: дочерний класс его не увидит
+  protected array $items = [];
+
+  public function addProduct(Product $product): void
+  {
+    $this->items[] = $product;
+  }
+
+  public function getGrandTotal(): float
+  {
+    $total = 0.0;
+    foreach ($this->items as $item) {
+      $total += $item->getTotal();
+    }
+    return $total;
+  }
+
+  // protected — общий вспомогательный метод для дочерних классов
+  // Это паттерн "Template Method": родитель предоставляет строительный блок
+  protected function printItems(): void
+  {
+    foreach ($this->items as $item) {
+      echo $item->toReceiptLine() . PHP_EOL;
+    }
+  }
+
+  public function printReceipt(): void
+  {
+    echo "=== Обычная корзина ===" . PHP_EOL;
+    $this->printItems();
+    echo "Итого: " . number_format($this->getGrandTotal(), 2, '.', '')
+      . " руб." . PHP_EOL;
+  }
 }
 
-// 3. Массив товаров (ассоциативные массивы)
-$cart = [
-    [
-        'name' => 'Ноутбук',
-        'price' => 75000.00,
-        'qty' => 2,
-        'discount' => 10.0,
-    ],
-    [
-        'name' => 'Мышь',
-        'price' => 2500.00,
-        'qty' => 1,
-        'discount' => 0.0,
-    ],
-    [
-        'name' => 'Клавиатура',
-        'price' => 3684.21, // или 3500.00 (подбираем так, чтобы со скидкой 5% было ровно 10500.00 руб.)
-        'qty' => 3,
-        'discount' => 5.0,
-    ],
-];
+class DiscountedCart extends Cart
+{
+  public function __construct(private float $extraDiscount) {}
 
-// 4. Формирование и вывод чека
-$grandTotal = 0.0;
+  public function getGrandTotal(): float
+  {
+    // parent:: — вызов метода родительского класса
+    // Берём сумму до доп. скидки и применяем свою
+    return parent::getGrandTotal() * (1 - $this->extraDiscount / 100);
+  }
 
-echo "=== Чек ===" . PHP_EOL;
+  public function printReceipt(): void
+  {
+    $subtotal       = parent::getGrandTotal();  // сумма БЕЗ доп. скидки
+    $discountAmount = $subtotal * ($this->extraDiscount / 100);
+    $grandTotal     = $this->getGrandTotal();   // сумма СО скидкой
 
-foreach ($cart as $item) {
-    // Считаем итоговую сумму по текущей позиции
-    $itemTotal = calcTotal($item['price'], $item['qty'], $item['discount']);
-    $grandTotal += $itemTotal;
-
-    // Приведение к наименованию с выравниванием пробелами для аккуратного вывода
-    $namePadded = str_pad($item['name'], 15, " ");
-    
-    // Формируем пометку о скидке, если она больше 0
-    $discountInfo = $item['discount'] > 0 
-        ? " (скидка " . (int)$item['discount'] . "%)" 
-        : "";
-
-    // Вывод строки чека
-    echo "{$namePadded} x{$item['qty']} — " . formatMoney($itemTotal) . "{$discountInfo}" . PHP_EOL;
+    echo "=== VIP корзина (доп. скидка {$this->extraDiscount}%) ===" . PHP_EOL;
+    $this->printItems();  // унаследованный метод Cart
+    echo "Итого без доп. скидки: "
+      . number_format($subtotal, 2, '.', '') . " руб." . PHP_EOL;
+    echo "Доп. скидка ({$this->extraDiscount}%): "
+      . number_format($discountAmount, 2, '.', '') . " руб." . PHP_EOL;
+    echo "Итого: "                                
+      . number_format($grandTotal, 2, '.', '')      . " руб." . PHP_EOL;
+  }
 }
 
-echo "-----------" . PHP_EOL;
+// --- Использование ---
 
-// 5. Определение типа заказа с помощью match
-$orderType = match (true) {
-    $grandTotal > 100000 => "(Крупный заказ)",
-    default => "(Обычный заказ)",
-};
+$cart = new Cart();
+$cart->addProduct(new Product("Ноутбук",    75000.00, 10.0));
+$cart->addProduct(new Product("Мышь",        2500.00));
+$cart->addProduct(new Product("Клавиатура", 11052.63,  5.0));
+$cart->printReceipt();
 
-// 6. Вывод общих итогов
-echo "Итого: " . formatMoney($grandTotal) . " {$orderType}" . PHP_EOL;
-echo "===========" . PHP_EOL;
+echo PHP_EOL;
+
+$vipCart = new DiscountedCart(5.0);
+$vipCart->addProduct(new Product("Ноутбук", 75000.00, 10.0));
+$vipCart->addProduct(new Product("Мышь",     2500.00));
+$vipCart->printReceipt();
 ```
+
+**Три ключевые вещи, которые стоит понять прежде чем копировать:**
+
+`protected` на `$items` — это намеренное решение. Если оставить `private`, `DiscountedCart` не увидит массив товаров и `printItems()` сломается. `protected` открывает доступ только для наследников, не для всего остального кода.
+
+`parent::getGrandTotal()` в двух местах `DiscountedCart` — это не баг, это осознанно. Для `$subtotal` нужна сумма без доп. скидки (т.е. результат родительского метода), для `$grandTotal` — уже с ней. Если вызвать `$this->getGrandTotal()` оба раза, скидка применится дважды.
+
+Constructor promotion — это синтаксический сахар PHP 8. `private float $extraDiscount` в конструкторе одновременно объявляет свойство, задаёт его тип и присваивает значение. Старый способ — три отдельных строки.
