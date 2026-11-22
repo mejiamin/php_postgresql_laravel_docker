@@ -6,8 +6,8 @@
 
 1. Переменные и типы данных
 2. Управление потоком и функции
-3. **👉 ООП в PHP**
-4. Файлы и обработка ошибок
+3. ООП в PHP
+4. **👉 Файлы и обработка ошибок**
 
 **Этап 2 - 3 урока: SQL & PostgreSQL**
 
@@ -32,348 +32,334 @@
 
 ---
 
-## Урок 3 — ООП в PHP
+## Урок 4 — Файлы и обработка ошибок
 
-ООП — это способ организовать код вокруг объектов, которые сочетают данные и поведение. Вместо отдельных функций и массивов ты создаёшь классы, которые описывают сущности предметной области.
+Это последний урок по чистому PHP. После него переходим к SQL и PostgreSQL.
 
-### 1. Класс и объект
+### 1. Простые операции с файлами
 
-Класс — это шаблон. Объект — экземпляр этого шаблона:
-
-```php
-<?php
-
-class Product {
-  // Свойства — данные объекта
-  public string $name;
-  public float $price;
-
-  // Конструктор — вызывается при создании объекта
-  public function __construct(string $name, float $price) {
-    $this->name  = $name;
-    $this->price = $price;
-  }
-
-  // Метод — поведение объекта
-  public function getFormattedPrice(): string {
-    return number_format($this->price, 2, '.', '') . " руб.";
-  }
-}
-
-$laptop = new Product("Ноутбук", 75000.0);
-echo $laptop->name;                  // Ноутбук
-echo $laptop->getFormattedPrice();   // 75000.00 руб.
-```
-
-`$this` внутри класса — это ссылка на текущий объект.
-
----
-
-### 2. Модификаторы доступа
-
-`public` — доступно везде. `private` — только внутри класса. `protected` — внутри класса и его наследников. Правило хорошего тона: свойства делай `private`, доступ давай через методы:
+Для большинства задач хватает двух функций:
 
 ```php
 <?php
 
-class Product {
-  private string $name;
-  private float  $price;
-  private float  $discount; // в процентах
+// Запись — создаёт файл если нет, перезаписывает если есть
+file_put_contents('data.txt', "Hello, World!\n");
 
-  public function __construct(
-    string $name, 
-    float $price, 
-    float $discount = 0.0,
-  ) {
-    $this->name     = $name;
-    $this->price    = $price;
-    $this->discount = $discount;
-  }
+// Дозапись в конец файла
+file_put_contents('data.txt', "Вторая строка\n", FILE_APPEND);
 
-  // Геттеры — контролируемый доступ к данным
-  public function getName(): string  { return $this->name; }
-  public function getPrice(): float  { return $this->price; }
+// Чтение — возвращает всё содержимое строкой
+$content = file_get_contents('data.txt');
+echo $content;
 
-  // Бизнес-логика внутри класса
-  public function getTotal(): float {
-    return $this->price * (1 - $this->discount / 100);
-  }
-
-  public function hasDiscount(): bool {
-    return $this->discount > 0.0;
-  }
-
-  public function getDiscountPercent(): float {
-    return $this->discount;
-  }
+// Проверки перед работой
+if (file_exists('data.txt')) {
+  echo "Файл существует\n";
 }
 
-$mouse = new Product("Мышь", 2500.0);
-$laptop = new Product("Ноутбук", 75000.0, 10.0);
-
-echo $laptop->getTotal();    // 67500
-echo $laptop->hasDiscount(); // 1 (true)
+// Удалить файл
+unlink('data.txt');
 ```
 
 ---
 
-### 3. Магический метод __toString
+### 2. Построчное чтение (для больших файлов)
 
-Позволяет использовать объект как строку — в `echo` и конкатенации:
+`file_get_contents` загружает файл целиком в память. Для больших файлов (логи, CSV на гигабайты) используй потоки:
 
 ```php
 <?php
 
-class Product {
-  // ... (свойства и конструктор как выше)
+$handle = fopen('data.csv', 'r'); // r = read, w = write, a = append
 
-  public function __toString(): string {
-    $total = number_format($this->getTotal(), 2, '.', '');
-    $info  = $this->hasDiscount()
-      ? " (скидка {$this->discount}%)"
-      : "";
-    return "{$this->name}: {$total} руб.{$info}";
-  }
+if ($handle === false) {
+  // fopen возвращает false если файл не открылся
+  die("Не удалось открыть файл\n");
 }
 
-$laptop = new Product("Ноутбук", 75000.0, 10.0);
-echo $laptop; // Ноутбук: 67500.00 руб. (скидка 10%)
+while (($line = fgets($handle)) !== false) {
+  echo trim($line) . "\n"; // trim убирает \n в конце строки
+}
+
+fclose($handle); // всегда закрывай дескриптор
+```
+
+Запись через потоки:
+
+```php
+<?php
+
+$handle = fopen('log.txt', 'a'); // a = append
+fwrite($handle, date('Y-m-d H:i:s') . " — событие\n");
+fclose($handle);
 ```
 
 ---
 
-### 4. Наследование
+### 3. Работа с JSON
 
-Дочерний класс получает все свойства и методы родителя и может расширять или переопределять их:
+JSON — стандарт обмена данными между сервисами. В PHP это `json_encode` / `json_decode`:
 
 ```php
 <?php
 
-class Product {
-  public function __construct(
-    protected string $name,
-    protected float  $price
-  ) {}
+$data = [
+  ['name' => 'Ноутбук', 'price' => 75000.0],
+  ['name' => 'Мышь',    'price' =>  2500.0],
+];
 
-  public function getTotal(): float {
-    return $this->price;
-  }
+// Массив → JSON строка
+$json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+file_put_contents('products.json', $json);
 
-  public function getName(): string { return $this->name; }
+// JSON строка → массив (второй аргумент true = ассоциативный массив, не объект)
+$loaded = json_decode(file_get_contents('products.json'), true);
+var_dump($loaded[0]['name']); // string(7) "Ноутбук"
+
+// Проверка ошибок декодирования
+if (json_last_error() !== JSON_ERROR_NONE) {
+  echo "Ошибка JSON: " . json_last_error_msg();
 }
-
-// Promoted properties в конструкторе (PHP 8) — сокращение выше
-// protected string $name автоматически создаёт свойство и присваивает его
-
-class DiscountedProduct extends Product {
-  public function __construct(
-    string $name,
-    float  $price,
-    private float $discount // добавляем новое свойство
-  ) {
-    parent::__construct($name, $price); // вызов конструктора родителя
-  }
-
-  // Переопределяем метод родителя
-  public function getTotal(): float {
-    return $this->price * (1 - $this->discount / 100);
-  }
-
-  public function getDiscount(): float { return $this->discount; }
-}
-
-$regular    = new Product("Мышь", 2500.0);
-$discounted = new DiscountedProduct("Ноутбук", 75000.0, 10.0);
-
-echo $regular->getTotal();    // 2500
-echo $discounted->getTotal(); // 67500
 ```
 
 ---
 
-### 5. Интерфейс
+### 4. Исключения
 
-Интерфейс — это контракт: класс, реализующий интерфейс, обязан иметь все указанные методы. Это основа полиморфизма:
+Исключения — механизм обработки ошибок. Вместо `die()` или возврата `false` бросай исключение, а в вызывающем коде лови его:
 
 ```php
 <?php
 
-interface Printable {
-  public function toReceiptLine(): string;
+function divide(int $a, int $b): float
+{
+  if ($b === 0) {
+    throw new \InvalidArgumentException("Делитель не может быть нулём");
+  }
+  return $a / $b;
 }
 
-class Product implements Printable {
-  public function __construct(
-    private string $name,
-    private float  $price,
-    private float  $discount = 0.0
-  ) {}
-
-  public function getTotal(): float {
-    return $this->price * (1 - $this->discount / 100);
-  }
-
-  public function toReceiptLine(): string {
-    $total = number_format($this->getTotal(), 2, '.', '');
-    $info  = $this->discount > 0 ? " (скидка {$this->discount}%)" : "";
-    return str_pad($this->name, 15) . "— {$total} руб.{$info}";
-  }
+try {
+  echo divide(10, 2) . "\n";  // 5
+  echo divide(10, 0) . "\n";  // бросает исключение
+  echo "Эта строка не выполнится\n";
+} catch (\InvalidArgumentException $e) {
+  echo "Ошибка: " . $e->getMessage() . "\n";
+} finally {
+  // finally выполняется ВСЕГДА — и при ошибке, и без неё
+  echo "Блок finally\n";
 }
 ```
+
+Несколько `catch` — ловят разные типы исключений:
+
+```php
+<?php
+
+try {
+  // ... какой-то код
+} catch (\InvalidArgumentException $e) {
+  echo "Неверный аргумент: " . $e->getMessage();
+} catch (\RuntimeException $e) {
+  echo "Ошибка выполнения: " . $e->getMessage();
+} catch (\Throwable $e) {
+  // Ловит всё остальное, включая Error (не только Exception)
+  echo "Неизвестная ошибка: " . $e->getMessage();
+}
+```
+
+---
+
+### 5. Пользовательские исключения
+
+Наследуй от стандартных классов, чтобы создавать смысловые исключения для своего кода:
+
+```php
+<?php
+
+// Базовый класс для всех ошибок хранилища
+class StorageException extends \RuntimeException {}
+
+// Конкретные типы — можно ловить по отдельности
+class FileNotFoundException extends StorageException {}
+class FileCorruptedException extends StorageException {}
+
+function readJson(string $path): array
+{
+  if (!file_exists($path)) {
+    throw new FileNotFoundException("Файл не найден: $path");
+  }
+
+  $content = file_get_contents($path);
+  $data    = json_decode($content, true);
+
+  if (json_last_error() !== JSON_ERROR_NONE) {
+    throw new FileCorruptedException("JSON повреждён: $path");
+  }
+
+  return $data;
+}
+
+try {
+  $data = readJson('missing.json');
+} catch (FileNotFoundException $e) {
+  echo "Файл отсутствует: " . $e->getMessage();
+} catch (FileCorruptedException $e) {
+  echo "Данные битые: " . $e->getMessage();
+}
+```
+
+---
+
+### 6. strict_types
+
+Добавляй это в начало каждого файла — включает строгую проверку типов. Без него PHP молча приведёт `"42"` к `int`, с ним — бросит `TypeError`:
+
+```php
+<?php
+declare(strict_types=1); // всегда первой строкой после <?php
+
+function add(int $a, int $b): int
+{
+  return $a + $b;
+}
+
+add(1, 2);     // OK
+add(1, "2");   // TypeError: Argument #2 must be of type int, string given
+add(1, 2.9);   // TypeError: Argument #2 must be of type int, float given
+```
+
+В Laravel `strict_types=1` — стандарт. Привыкай сейчас.
 
 ---
 
 ## Практическое задание
 
-Создай файл `lesson3.php`. Реализуй три класса.
+Создай файл `lesson4.php` — система хранения корзины в JSON.
 
-**`Product`** — свойства `name`, `price`, `discount` (все `private`). Конструктор с тремя параметрами, `discount = 0.0` по умолчанию. Методы: `getName()`, `getTotal(): float` (цена со скидкой), `toReceiptLine(): string` (одна строка для чека).
+**Что реализовать:**
 
-**`Cart`** — хранит массив объектов `Product` в приватном свойстве `$items = []`. Методы: `addProduct(Product $product): void`, `getGrandTotal(): float` (сумма всех `getTotal()`), `printReceipt(): void` (выводит полный чек).
+Два кастомных исключения: `FileNotFoundException` и `FileCorruptedException` — оба наследуют `\RuntimeException`.
 
-**`DiscountedCart`** — наследует `Cart`. Принимает в конструктор дополнительный `float $extraDiscount` — скидка на всю корзину целиком. Переопределяет `getGrandTotal()`: применяет `$extraDiscount` поверх суммы родителя. Переопределяет `printReceipt()`: добавляет строку с общей скидкой на корзину.
+Класс `JsonStorage` с тремя методами: `write(string $path, array $data): void` — кодирует массив в JSON и пишет в файл, бросает `\RuntimeException` если запись не удалась. `read(string $path): array` — читает файл и декодирует JSON, бросает `FileNotFoundException` или `FileCorruptedException` в соответствующих ситуациях. `delete(string $path): void` — удаляет файл, бросает `FileNotFoundException` если его нет.
+
+В основном коде: создай массив из трёх товаров (те же что в уроке 3 или новые), сохрани в `cart.json`, прочитай обратно и выведи список. Затем попробуй прочитать `ghost.json` (несуществующий) и поймай исключение. Затем удали `cart.json`.
 
 Ожидаемый вывод:
 
 ```
-=== Обычная корзина ===
-Ноутбук         — 67500.00 руб. (скидка 10%)
-Мышь            — 2500.00 руб.
-Клавиатура      — 10500.00 руб. (скидка 5%)
-Итого: 80500.00 руб.
+Сохранено 3 товара в cart.json
 
-=== VIP корзина (доп. скидка 5%) ===
-Ноутбук         — 67500.00 руб. (скидка 10%)
-Мышь            — 2500.00 руб.
-Итого без доп. скидки: 70000.00 руб.
-Доп. скидка (5%): 3500.00 руб.
-Итого: 66500.00 руб.
+Загружено из файла:
+ - Ноутбук: 67500.00 руб.
+ - Мышь: 2500.00 руб.
+ - Клавиатура: 10500.00 руб.
+
+[Ошибка] Файл не найден: ghost.json
+cart.json удалён
 ```
 
 ---
 
 ## Решение практического задания
 
+Покажу — но советую хотя бы пробежаться по коду и понять каждую строку, прежде чем двигаться дальше. SQL без понимания исключений будет труднее.
+
 ```php
 <?php
+declare(strict_types=1);
 
-class Product
+// --- Кастомные исключения ---
+
+class FileNotFoundException extends \RuntimeException {}
+class FileCorruptedException extends \RuntimeException {}
+
+// --- Класс хранилища ---
+
+class JsonStorage
 {
-  // Constructor promotion (PHP 8) — свойства объявляются прямо в конструкторе
-  public function __construct(
-    private string $name,
-    private float  $price,
-    private float  $discount = 0.0
-  ) {}
-
-  public function getName(): string
+  public function write(string $path, array $data): void
   {
-    return $this->name;
-  }
+    $json   = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    $result = file_put_contents($path, $json);
 
-  public function getTotal(): float
-  {
-    return $this->price * (1 - $this->discount / 100);
-  }
-
-  public function toReceiptLine(): string
-  {
-    $total        = number_format($this->getTotal(), 2, '.', '');
-    $discountInfo = $this->discount > 0
-      ? " (скидка {$this->discount}%)"
-      : "";
-
-    return str_pad($this->name, 15) . "— {$total} руб.{$discountInfo}";
-  }
-}
-
-class Cart
-{
-  // protected — чтобы DiscountedCart мог обратиться к items
-  // private здесь не подойдёт: дочерний класс его не увидит
-  protected array $items = [];
-
-  public function addProduct(Product $product): void
-  {
-    $this->items[] = $product;
-  }
-
-  public function getGrandTotal(): float
-  {
-    $total = 0.0;
-    foreach ($this->items as $item) {
-      $total += $item->getTotal();
-    }
-    return $total;
-  }
-
-  // protected — общий вспомогательный метод для дочерних классов
-  // Это паттерн "Template Method": родитель предоставляет строительный блок
-  protected function printItems(): void
-  {
-    foreach ($this->items as $item) {
-      echo $item->toReceiptLine() . PHP_EOL;
+    // file_put_contents возвращает false при ошибке записи
+    if ($result === false) {
+      throw new \RuntimeException("Не удалось записать файл: $path");
     }
   }
 
-  public function printReceipt(): void
+  public function read(string $path): array
   {
-    echo "=== Обычная корзина ===" . PHP_EOL;
-    $this->printItems();
-    echo "Итого: " . number_format($this->getGrandTotal(), 2, '.', '')
-      . " руб." . PHP_EOL;
+    if (!file_exists($path)) {
+      throw new FileNotFoundException("Файл не найден: $path");
+    }
+
+    $content = file_get_contents($path);
+    $data    = json_decode($content, true);
+
+    // json_decode возвращает null при невалидном JSON
+    if (json_last_error() !== JSON_ERROR_NONE) {
+      throw new FileCorruptedException("JSON повреждён: $path");
+    }
+
+    return $data;
+  }
+
+  public function delete(string $path): void
+  {
+    if (!file_exists($path)) {
+      throw new FileNotFoundException("Файл не найден: $path");
+    }
+
+    unlink($path);
   }
 }
 
-class DiscountedCart extends Cart
-{
-  public function __construct(private float $extraDiscount) {}
+// --- Основной код ---
 
-  public function getGrandTotal(): float
-  {
-    // parent:: — вызов метода родительского класса
-    // Берём сумму до доп. скидки и применяем свою
-    return parent::getGrandTotal() * (1 - $this->extraDiscount / 100);
-  }
+$storage = new JsonStorage();
 
-  public function printReceipt(): void
-  {
-    $subtotal       = parent::getGrandTotal();  // сумма БЕЗ доп. скидки
-    $discountAmount = $subtotal * ($this->extraDiscount / 100);
-    $grandTotal     = $this->getGrandTotal();   // сумма СО скидкой
+$cart = [
+  ['name' => 'Ноутбук',    'price' => 75000.00, 'discount' => 10.0],
+  ['name' => 'Мышь',       'price' =>  2500.00, 'discount' =>  0.0],
+  ['name' => 'Клавиатура', 'price' => 11052.63, 'discount' =>  5.0],
+];
 
-    echo "=== VIP корзина (доп. скидка {$this->extraDiscount}%) ===" . PHP_EOL;
-    $this->printItems();  // унаследованный метод Cart
-    echo "Итого без доп. скидки: "
-      . number_format($subtotal, 2, '.', '') . " руб." . PHP_EOL;
-    echo "Доп. скидка ({$this->extraDiscount}%): "
-      . number_format($discountAmount, 2, '.', '') . " руб." . PHP_EOL;
-    echo "Итого: "                                
-      . number_format($grandTotal, 2, '.', '')      . " руб." . PHP_EOL;
-  }
+// Сохранение
+$storage->write('cart.json', $cart);
+echo "Сохранено " . count($cart) . " товара в cart.json" . PHP_EOL;
+
+// Чтение и вывод
+echo PHP_EOL . "Загружено из файла:" . PHP_EOL;
+
+$loaded = $storage->read('cart.json');
+
+foreach ($loaded as $item) {
+  $total = $item['price'] * (1 - $item['discount'] / 100);
+  echo " - {$item['name']}: " . number_format($total, 2, '.', '') . " руб." . PHP_EOL;
 }
 
-// --- Использование ---
-
-$cart = new Cart();
-$cart->addProduct(new Product("Ноутбук",    75000.00, 10.0));
-$cart->addProduct(new Product("Мышь",        2500.00));
-$cart->addProduct(new Product("Клавиатура", 11052.63,  5.0));
-$cart->printReceipt();
-
+// Попытка прочитать несуществующий файл
 echo PHP_EOL;
+try {
+  $storage->read('ghost.json');
+} catch (FileNotFoundException $e) {
+  echo "[Ошибка] " . $e->getMessage() . PHP_EOL;
+}
 
-$vipCart = new DiscountedCart(5.0);
-$vipCart->addProduct(new Product("Ноутбук", 75000.00, 10.0));
-$vipCart->addProduct(new Product("Мышь",     2500.00));
-$vipCart->printReceipt();
+// Удаление
+$storage->delete('cart.json');
+echo "cart.json удалён" . PHP_EOL;
 ```
 
-**Три ключевые вещи, которые стоит понять прежде чем копировать:**
+**Три вещи, которые важно понять:**
 
-`protected` на `$items` — это намеренное решение. Если оставить `private`, `DiscountedCart` не увидит массив товаров и `printItems()` сломается. `protected` открывает доступ только для наследников, не для всего остального кода.
+`file_put_contents` возвращает `false` при ошибке — не бросает исключение само по себе. Поэтому нужна явная проверка `=== false`. Строгое сравнение важно: `0` (записано 0 байт) тоже вернул бы `false` при нестрогом `==`.
 
-`parent::getGrandTotal()` в двух местах `DiscountedCart` — это не баг, это осознанно. Для `$subtotal` нужна сумма без доп. скидки (т.е. результат родительского метода), для `$grandTotal` — уже с ней. Если вызвать `$this->getGrandTotal()` оба раза, скидка применится дважды.
+`json_decode` возвращает `null` при невалидном JSON — но `null` это ещё не ошибка сама по себе, ведь можно было сохранить `null` намеренно. Поэтому проверяем через `json_last_error()`, который хранит код последней ошибки декодирования.
 
-Constructor promotion — это синтаксический сахар PHP 8. `private float $extraDiscount` в конструкторе одновременно объявляет свойство, задаёт его тип и присваивает значение. Старый способ — три отдельных строки.
+Оба кастомных исключения — пустые классы. Тело не нужно, всё нужное уже есть в `\RuntimeException`. Смысл их существования — в имени: код `catch (FileNotFoundException $e)` читается как документация.
+
+Запусти, убедись что вывод совпадает — и переходим к Уроку 5: SQL и PostgreSQL.
